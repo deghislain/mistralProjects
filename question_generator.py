@@ -95,11 +95,15 @@ def get_user_answer(quest):
         return ""
 
 
-
 def next_question():
     if 'current_question_number' in st.session_state:
-        curr_quest_num = st.session_state['current_question_number']
-        return st.session_state['questions'][curr_quest_num]
+        try:
+            curr_quest_num = st.session_state['current_question_number']
+            return st.session_state['questions'][curr_quest_num]
+        except Exception as e:
+            print("Error while retrieving questions from session", e)
+
+    return None
 
 
 def check_answer(q, user_resp):
@@ -114,21 +118,26 @@ def check_answer(q, user_resp):
         else:
             msg = "Wrong Answer"
 
-        st.write(':red[ '+ msg+']')
+        st.write(':red[ ' + msg + ']')
     return is_correct
 
 
 def show_question():
     st.experimental_rerun()
-    q = next_question()
-    u_resp = get_user_answer(q)
-    check_answer(q, u_resp)
-    st.button("Check Answer")
+    question = next_question()
+    if question is not None:
+        u_resp = get_user_answer(question)
+        check_answer(question, u_resp)
+        st.button("Check Answer")
+    st.write(':green[Test completed]')
 
 
 get_the_questionnaire()
 q = next_question()
-user_resp = get_user_answer(q)
-if st.button("Check Answer"):
-    if check_answer(q, user_resp):
-        show_question()
+if q is not None:
+    user_resp = get_user_answer(q)
+    if st.button("Check Answer"):
+        if check_answer(q, user_resp):
+            show_question()
+else:
+    st.write(':red[No question available]')
