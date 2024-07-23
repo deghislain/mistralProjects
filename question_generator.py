@@ -75,11 +75,12 @@ def get_the_questionnaire():
         questions = json_resp["questions"]
         st.session_state['questions'] = questions
         st.session_state['current_question_number'] = 0
+        st.session_state['score'] = 0
         print_json(resp)
 
 
 def get_user_answer(quest):
-    st.write(':blue[' + quest["question"] + ']')
+    st.write(':blue[' + quest["question"] + ']  5 points ')
     answers = quest["answers"]
     resp_a = st.checkbox(answers["A"])
     resp_b = st.checkbox(answers["B"])
@@ -106,6 +107,13 @@ def next_question():
     return None
 
 
+def update_user_score():
+    if 'score' in st.session_state:
+        score = st.session_state['score']
+        score = score + 5
+        st.session_state['score'] = score
+
+
 def check_answer(q, user_resp):
     msg = ""
     is_correct = False
@@ -115,6 +123,7 @@ def check_answer(q, user_resp):
             cqt = st.session_state['current_question_number']
             st.session_state['current_question_number'] = cqt + 1
             is_correct = True
+            update_user_score()
         else:
             msg = "Wrong Answer"
 
@@ -141,4 +150,10 @@ if is_document_loaded:
             if check_answer(q, user_resp):
                 show_question()
     else:
-        st.write(':red[No question available]')
+        if 'score' in st.session_state:
+            s = st.session_state['score']
+            if s > 0:
+                st.header(':blue[Test completed]')
+                st.title('Your score for this test is :green['.__add__(str(s)) + ']')
+            else:
+                st.write(':red[No question available]')
