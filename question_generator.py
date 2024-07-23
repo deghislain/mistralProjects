@@ -133,11 +133,12 @@ def show_question():
 
 
 get_the_questionnaire()
-q = next_question()
-if q is not None:
-    user_resp = get_user_answer(q)
-    if st.button("Check Answer"):
-        if check_answer(q, user_resp):
-            show_question()
-else:
-    st.write(':red[No question available]')
+if is_document_loaded:
+    q = next_question()
+    if q is not None:
+        user_resp = get_user_answer(q)
+        if st.button("Check Answer"):
+            if check_answer(q, user_resp):
+                show_question()
+    else:
+        st.write(':red[No question available]')
