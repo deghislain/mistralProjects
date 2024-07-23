@@ -57,7 +57,6 @@ prompt = f"""
         ---------------------
         You are an AI teacher. Given the context information and not prior knowledge, 
         your task is to generate a list of 5 questions with answers.
-        The questions shall test the level of knowledge of your student regarding the content of this {text_document}.
         You will return a response in json format. Each question must have 3 answers in the multiple choice question style.
         Only one response shall be correct. The correct answer shall be labeled as solution.
         
