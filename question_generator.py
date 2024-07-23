@@ -1,4 +1,3 @@
-import PyPDF2
 from PyPDF2 import PdfReader
 
 import mistral_client as mc
@@ -6,13 +5,17 @@ from rich import print_json
 import streamlit as st
 import json
 
+is_document_loaded = False
+
 
 def extract_text_from_pdf():
+    global is_document_loaded
     label = "Upload a PDF document here"
     file = st.file_uploader(label, type=['pdf'], accept_multiple_files=False, key=None, help=None, on_change=None,
                             args=None, kwargs=None, disabled=False, label_visibility="visible")
     text = ""
     if file is not None:
+        is_document_loaded = True
         reader = PdfReader(file)
         for page in reader.pages:
             text = text + page.extract_text()
@@ -21,8 +24,7 @@ def extract_text_from_pdf():
 
 text_document = extract_text_from_pdf()
 print(text_document)
-print("---------------------------------------------------------------------------")
-example_response ="""
+example_response = """
 {{
             "questions":{
                             { 
@@ -32,7 +34,7 @@ example_response ="""
                                         "B": "Large language models are AI protocols."
                                         "C": "Large language models are a type of neural networks."
                                 },
-                               "solution": "answer A"
+                               "solution": "A"
                             },
                             { 
                                 "question": "How does Large language models work?",
@@ -42,13 +44,13 @@ example_response ="""
                                                 the natural language data sets that they’re trained on."
                                         "C":  "Large language models just use statistic an internet to generate text"
                                 },
-                               "solution": "answer B"
+                               "solution": "B"
                             }
         
         }}  
 """
 
-prompt =f""" 
+prompt = f""" 
         Context information is below.
         ---------------------
         {text_document}
@@ -66,19 +68,67 @@ prompt =f"""
 """
 
 
-def print_questions_answers(response):
-    json_resp = json.loads(response)
-    questions = json_resp["questions"]
-    for q in questions:
-        st.header(':blue[' + q["question"] + ']')
-        answers = q["answers"]
-        st.write(answers["A"])
-        st.write(answers["B"])
-        st.write(answers["C"])
+def get_the_questionnaire():
+    if 'questions' not in st.session_state:
+        resp = mc.mistral(prompt, is_json=True)
+        json_resp = json.loads(resp)
+        questions = json_resp["questions"]
+        st.session_state['questions'] = questions
+        st.session_state['current_question_number'] = 0
+        print_json(resp)
 
 
-if text_document != "":
-    response = mc.mistral(prompt, is_json=True)
-    print_json(response)
+def get_user_answer(quest):
+    st.write(':blue[' + quest["question"] + ']')
+    answers = quest["answers"]
+    resp_a = st.checkbox(answers["A"])
+    resp_b = st.checkbox(answers["B"])
+    resp_c = st.checkbox(answers["C"])
 
-    print_questions_answers(response)
+    if resp_a:
+        return "A"
+    elif resp_b:
+        return "B"
+    elif resp_c:
+        return "C"
+    else:
+        return ""
+
+
+
+def next_question():
+    if 'current_question_number' in st.session_state:
+        curr_quest_num = st.session_state['current_question_number']
+        return st.session_state['questions'][curr_quest_num]
+
+
+def check_answer(q, user_resp):
+    msg = ""
+    is_correct = False
+    if user_resp is not "":
+        if q['solution'] is user_resp:
+            msg = "Correct Answer"
+            cqt = st.session_state['current_question_number']
+            st.session_state['current_question_number'] = cqt + 1
+            is_correct = True
+        else:
+            msg = "Wrong Answer"
+
+        st.write(':red[ '+ msg+']')
+    return is_correct
+
+
+def show_question():
+    st.experimental_rerun()
+    q = next_question()
+    u_resp = get_user_answer(q)
+    check_answer(q, u_resp)
+    st.button("Check Answer")
+
+
+get_the_questionnaire()
+q = next_question()
+user_resp = get_user_answer(q)
+if st.button("Check Answer"):
+    if check_answer(q, user_resp):
+        show_question()
