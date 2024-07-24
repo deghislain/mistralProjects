@@ -22,8 +22,9 @@ def extract_text_from_pdf():
     return text
 
 
-text_document = extract_text_from_pdf()
-print(text_document)
+if not is_document_loaded:
+    text_document = extract_text_from_pdf()
+
 example_response = """
 {{
             "questions":{
@@ -51,12 +52,14 @@ example_response = """
 """
 
 prompt = f""" 
-        Context information is below.
+        The following text document is about large language model.
         ---------------------
         {text_document}
         ---------------------
-        You are an AI teacher. Given the context information and not prior knowledge, 
+        You are an AI teacher. Given the text document and not prior knowledge.
         your task is to generate a list of 5 questions with answers.
+        The instructions for this task are as follow:
+        All generated questions must come from the provided text document content.
         You will return a response in json format. Each question must have 3 answers in the multiple choice question style.
         Only one response shall be correct. The correct answer shall be labeled as solution.
         
@@ -68,13 +71,21 @@ prompt = f"""
 
 
 def get_the_questionnaire():
-    if 'questions' not in st.session_state:
+    test_status = ""
+    if 'test_status' in st.session_state:
+        test_status = st.session_state['test_status']
+    if 'questions' not in st.session_state or test_status == "completed":
         resp = mc.mistral(prompt, is_json=True)
         json_resp = json.loads(resp)
         questions = json_resp["questions"]
         st.session_state['questions'] = questions
         st.session_state['current_question_number'] = 0
         st.session_state['score'] = 0
+        if test_status == "completed":
+            st.session_state['test_status'] = "new_test"
+        elif test_status == "":
+            st.session_state['test_status'] = "loaded"
+
         print_json(resp)
 
 
@@ -114,19 +125,13 @@ def update_user_score():
 
 
 def check_answer(q, user_resp):
-    msg = ""
     is_correct = False
-    if user_resp is not "":
+    if user_resp != "":
         if q['solution'] is user_resp:
-            msg = "Correct Answer"
             cqt = st.session_state['current_question_number']
             st.session_state['current_question_number'] = cqt + 1
             is_correct = True
             update_user_score()
-        else:
-            msg = "Wrong Answer"
-
-        st.write(':red[ ' + msg + ']')
     return is_correct
 
 
@@ -136,23 +141,42 @@ def show_question():
     if question is not None:
         u_resp = get_user_answer(question)
         check_answer(question, u_resp)
-        st.button("Check Answer")
+        st.button("Check Answer", key="checkansws")
     st.write(':green[Test completed]')
 
 
-get_the_questionnaire()
-if is_document_loaded:
+def start_new_test():
+    st.session_state['current_question_number'] = 0
+    st.session_state['score'] = 0
+    st.experimental_rerun()
+    start_test()
+
+
+def start_test():
+    get_the_questionnaire()
     q = next_question()
     if q is not None:
+        st.session_state['test_status'] = "running"
         user_resp = get_user_answer(q)
-        if st.button("Check Answer"):
+        if st.button("Check Answer", key="checkansw"):
             if check_answer(q, user_resp):
+                st.write(':green[Correct Answer]')
                 show_question()
+            else:
+                st.write(':red[Wrong Answer]')
     else:
         if 'score' in st.session_state:
             s = st.session_state['score']
             if s > 0:
                 st.header(':blue[Test completed]')
                 st.title('Your score for this test is :green['.__add__(str(s)) + ']')
+                st.session_state['test_status'] = "completed"
+                if st.button("Start New Test", key="newtest"):
+                    start_new_test()
+
             else:
                 st.write(':red[No question available]')
+
+
+if is_document_loaded:
+    start_test()
