@@ -2,6 +2,7 @@ from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
 import os
 
+
 def mistral(user_message,
             model="mistral-small-latest",
             is_json=False):

@@ -7,6 +7,7 @@ import json
 
 is_document_loaded = False
 
+
 def extract_text_from_pdf():
     global is_document_loaded
     label = "Upload a PDF document here"
@@ -68,6 +69,7 @@ prompt = f"""
 
 """
 
+
 def get_the_questionnaire():
     test_status = ""
     if 'test_status' in st.session_state:
@@ -86,7 +88,7 @@ def get_the_questionnaire():
 
         print_json(resp)
 
-if __name__ == "__main__":
-    if is_document_loaded:
-        get_the_questionnaire()
-        qg.start_test()
+
+if is_document_loaded:
+    get_the_questionnaire()
+    qg.start_test()
